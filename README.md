@@ -11,8 +11,8 @@ The skills are written in Japanese, because they are norms for Japanese text.
 | Skill | `japanese-tech-writing` | Writing norms: paragraph structure, rigor of argument, reader load, point of view, restraint in rhetoric, no empty LLM phrasing, no calques of English idioms, no redundancy. Embeds [k16shikano's norms](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d) verbatim and adds a scope note and formatting rules. |
 | Skill | `japanese-writing-router` | Chooses which norms apply per channel (documents, chat, boards, email, review of a given text), sets honorifics and disclosure per recipient (internal, community, customer, partner), asks before guessing a recipient, handles Markdown line breaks and BudouX wrapping, and keeps message templates. |
 | Skill | `markdown-style` | Markdown that GFM renders differently in Japanese text: `**` next to 」 or ）, lost trailing spaces, line breaks in table cells, auto-links. |
-| Agent | `jp-copy-editor` | Edits several drafts at once against the two skills above and returns open questions about recipients instead of guessing. |
-| Hook | PostToolUse on `Write\|Edit` | Checks the lines an edit added to a `.md` file and warns Claude. Never blocks. |
+| Agent | `jp-copy-editor` | Edits several drafts at once against the two skills above without changing what a draft claims or adding facts it lacks, lists what it changed and why, and returns open questions about recipients instead of guessing. |
+| Hook | PostToolUse on `Write\|Edit` | Checks the lines an edit added to a `.md` file and warns Claude: emphasis that renders literally, missing line-break spaces, and runs of the same sentence ending. Never blocks. |
 | Sample | `hooks/pre-commit.sample` | The same checks on lines added in staged `.md` files, for repositories that want a commit gate. |
 | Scripts | `scripts/budoux-wrap`, `scripts/setup-budoux` | Wrap Japanese text at [BudouX](https://github.com/google/budoux) phrase boundaries. |
 
@@ -29,7 +29,7 @@ ccwrite does not choose between polite (です・ます) and plain (だ・であ
 
 ### Markdown checks
 
-The hook reads two environment variables. Set them per repository in `.claude/settings.json`:
+The hook reads three environment variables. Set them per repository in `.claude/settings.json`:
 
 ```json
 {
@@ -43,13 +43,14 @@ The hook reads two environment variables. Set them per repository in `.claude/se
 |---|---|---|
 | `CCWRITE_EMPHASIS` | on | `0` turns off the emphasis check. The check needs [pandoc](https://pandoc.org/); without it, it stays silent. |
 | `CCWRITE_LINEBREAKS` | off | `1` also reports paragraph lines without trailing two spaces. Turn it on in repositories that write one sentence per line. |
+| `CCWRITE_ENDINGS` | on | `0` turns off the same-ending hint: three sentences in a row in one paragraph whose last three characters before 。！？ match (〜します。〜します。〜します。). Lists, tables, quotes, 「」 and code are not counted. It is a hint about rhythm, not a rendering problem, so `pre-commit.sample` does not run it. |
 
 Only lines the edit added are checked (Edit: the lines holding `new_string`; Write: lines that differ from `HEAD`, or the whole file if git does not track it), so old problems in a file are not reported.
 
 To check a whole file by hand:
 
 ```bash
-python3 scripts/mdcheck.py [--linebreaks] FILE.md
+python3 scripts/mdcheck.py [--linebreaks] [--endings] FILE.md
 ```
 
 ### Templates
@@ -80,3 +81,5 @@ The emphasis tests are skipped without pandoc, and the BudouX test without budou
 ## License
 
 MIT, except the embedded upstream norms in `skills/japanese-tech-writing/SKILL.md`, which are under the Unlicense. See [LICENSE](LICENSE).
+
+Some examples in the japanese-tech-writing section on calques and LLM phrasing, the editing guardrails and output sections of `jp-copy-editor`, and the idea of the same-ending check come from [yomiyasu](https://github.com/nanaism/yomiyasu) (MIT, Copyright (c) 2026 nanaism).

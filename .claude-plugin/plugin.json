@@ -1,7 +1,7 @@
 {
   "name": "ccwrite",
-  "description": "Japanese writing for Claude Code: writing norms, a router that adapts text to the channel and recipient, a batch copy-editor agent, and warn-only checks for Markdown that renders differently from its source (emphasis next to Japanese punctuation, missing line-break spaces).",
-  "version": "0.1.0",
+  "description": "Japanese writing for Claude Code: writing norms, a router that adapts text to the channel and recipient, a batch copy-editor agent that keeps a draft's meaning, and warn-only checks for Markdown that renders differently from its source (emphasis next to Japanese punctuation, missing line-break spaces) and for runs of the same sentence ending.",
+  "version": "0.2.0",
   "author": {
     "name": "LevNas"
   },

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""PostToolUse hook: warn about Markdown that renders differently from its source.
+"""PostToolUse hook: warn about Markdown that renders differently from its source,
+and about runs of the same sentence ending.
 
 Runs scripts/mdcheck.py on the lines a Write or Edit added to a .md file and
 tells Claude what it found. It never blocks: the edit has already happened, and
@@ -12,6 +13,7 @@ that differ from HEAD, or every line for a file git does not track.
 Environment (set it in the repository's .claude/settings.json "env"):
     CCWRITE_LINEBREAKS=1   also check trailing two spaces (off by default)
     CCWRITE_EMPHASIS=0     skip the emphasis check (on by default; needs pandoc)
+    CCWRITE_ENDINGS=0      skip the same-ending check (on by default)
 
 Any error ends the hook silently with exit 0.
 """
@@ -72,7 +74,8 @@ def main():
 
     linebreaks = os.environ.get("CCWRITE_LINEBREAKS", "").lower() in TRUE
     emphasis = os.environ.get("CCWRITE_EMPHASIS", "").lower() not in FALSE
-    if not linebreaks and not (emphasis and mdcheck.has_pandoc()):
+    endings = os.environ.get("CCWRITE_ENDINGS", "").lower() not in FALSE
+    if not linebreaks and not endings and not (emphasis and mdcheck.has_pandoc()):
         return
 
     with open(path, encoding="utf-8") as f:
@@ -81,7 +84,7 @@ def main():
     if wanted is not None and not wanted:
         return
 
-    found = mdcheck.check(content.split("\n"), wanted, linebreaks, emphasis)
+    found = mdcheck.check(content.split("\n"), wanted, linebreaks, emphasis, endings)
     if not found:
         return
 
@@ -91,7 +94,12 @@ def main():
     if any(kind == "emphasis" for kind, _, _ in found):
         hints.append("make the first and last characters inside ** letters, not punctuation "
                      "(**A（B）まで**で), or put a space outside the ** (は **「重要」** の)")
-    message = (f"[ccwrite] Markdown that will not render as written, on lines this edit added:\n"
+    if any(kind == "ending" for kind, _, _ in found):
+        hints.append("for the same ending, a hint only: rework it only if the run reads "
+                     "monotonous, by joining sentences or changing word order, and never by "
+                     "swapping in an ending that changes what the sentence does (a request, a "
+                     "guess, a rule); leave it when the repetition is deliberate, as in steps")
+    message = (f"[ccwrite] Markdown checks on lines this edit added:\n"
                f"{mdcheck.report(path, found)}\nFix: " + "; ".join(hints) + ".")
     json.dump({"hookSpecificOutput": {"hookEventName": "PostToolUse",
                                       "additionalContext": message}},

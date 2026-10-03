@@ -68,6 +68,55 @@ class Emphasis(unittest.TestCase):
         self.assertEqual(self.misses(text, {2}), [])
 
 
+class Endings(unittest.TestCase):
+    def runs(self, text, wanted=None):
+        return [n for n, _ in mdcheck.ending_runs(text.split("\n"), wanted)]
+
+    def test_three_same_endings_in_a_row(self):
+        self.assertEqual(self.runs("設定を開きます。値を変更します。保存して終了します。\n"), [])
+        self.assertEqual(self.runs("値を確認します。表を更新します。図を作成します。\n"), [1])
+
+    def test_polite_text_with_varied_endings_passes(self):
+        # Same です・ます, different four characters: the case a coarse check gets wrong.
+        text = "設定を変更します。\n変更は自動で反映されます。\n再起動は不要です。\n確認もできます。\n"
+        self.assertEqual(self.runs(text), [])
+
+    def test_one_report_per_run_on_its_third_sentence(self):
+        text = "一つ目を確認します。\n二つ目を確認します。\n三つ目を確認します。\n四つ目を確認します。\n"
+        self.assertEqual(self.runs(text), [3])
+
+    def test_runs_do_not_cross_paragraphs(self):
+        text = "一つ目を確認します。\n二つ目を確認します。\n\n三つ目を確認します。\n"
+        self.assertEqual(self.runs(text), [])
+
+    def test_noun_and_code_endings_break_a_run(self):
+        text = "値を確認します。\n次は `make` です。\n表を確認します。\n図を確認します。\n"
+        self.assertEqual(self.runs(text), [])
+        self.assertEqual(self.runs("値を確認します。手順は次の三つ。表を確認します。図を確認します。\n"), [])
+
+    def test_lists_tables_quotes_and_front_matter_ignored(self):
+        text = ("---\ndescription: 一つ目を確認します。二つ目を確認します。三つ目を確認します。\n---\n"
+                "- 一つ目を確認します。\n- 二つ目を確認します。\n- 三つ目を確認します。\n\n"
+                "> 一つ目を確認します。二つ目を確認します。三つ目を確認します。\n\n"
+                "| 一つ目を確認します。二つ目を確認します。三つ目を確認します。 |\n\n"
+                "```\n一つ目を確認します。二つ目を確認します。三つ目を確認します。\n```\n")
+        self.assertEqual(self.runs(text), [])
+
+    def test_quotations_and_code_are_not_the_writers_endings(self):
+        text = "文末（「〜します。」「〜します。」「〜します。」）が続くと単調になる。\n"
+        self.assertEqual(self.runs(text), [])
+        self.assertEqual(self.runs("例は `a します。b します。c します。` だ。\n"), [])
+
+    def test_sentence_across_lines_and_emphasis_marks(self):
+        text = "一つ目の値を\n確認します。二つ目を**確認します**。\n三つ目を確認します。\n"
+        self.assertEqual(self.runs(text), [3])
+
+    def test_wanted_keeps_runs_touching_added_lines(self):
+        text = "一つ目を確認します。\n二つ目を確認します。\n三つ目を確認します。\n\n別の段落です。\n"
+        self.assertEqual(self.runs(text, {1}), [3])
+        self.assertEqual(self.runs(text, {5}), [])
+
+
 class AddedLines(unittest.TestCase):
     def test_parse_hunks(self):
         diff = ("diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n"
@@ -99,7 +148,7 @@ class Hook(unittest.TestCase):
         return path
 
     def run_hook(self, payload, **env):
-        full = dict(os.environ, CCWRITE_LINEBREAKS="", CCWRITE_EMPHASIS="")
+        full = dict(os.environ, CCWRITE_LINEBREAKS="", CCWRITE_EMPHASIS="", CCWRITE_ENDINGS="0")
         full.update(env)
         r = subprocess.run([sys.executable, HOOK], input=json.dumps(payload),
                            capture_output=True, text=True, env=full)
@@ -141,6 +190,14 @@ class Hook(unittest.TestCase):
         md = self.write("b.md", "一文目。\n二文目。\n")
         self.assertEqual(self.run_hook({"tool_name": "Read", "tool_input": {"file_path": md}},
                                        CCWRITE_LINEBREAKS="1"), "")
+
+    def test_endings_on_by_default_and_off_with_zero(self):
+        path = self.write("a.md", "一つ目を確認します。\n二つ目を確認します。\n三つ目を確認します。\n")
+        payload = {"tool_name": "Write", "tool_input": {"file_path": path}}
+        msg = self.run_hook(payload, CCWRITE_ENDINGS="", CCWRITE_EMPHASIS="0")
+        self.assertIn("L3 third sentence in a row with the same ending", msg)
+        self.assertIn("a hint only", msg)
+        self.assertEqual(self.run_hook(payload, CCWRITE_EMPHASIS="0"), "")
 
     def test_bad_input_fails_open(self):
         r = subprocess.run([sys.executable, HOOK], input="not json", capture_output=True, text=True)

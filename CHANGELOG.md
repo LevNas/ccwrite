@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+
+- Same-ending hint (`scripts/mdcheck.py --endings`, on in the hook, `CCWRITE_ENDINGS=0` turns it off): three sentences in a row in one paragraph whose last three characters before 。！？ match. Lists, tables, quotes, 「」, code and front matter are not counted, and a run never crosses a paragraph. Not run by `pre-commit.sample`. Measured before choosing three characters: a class-level check (です vs ます) fires on polite text that reads fine, while three characters fired 0 times on 16 human-written texts and once in 313 knowledge-base notes, and 7 times in 24 raw LLM texts.
+- `japanese-tech-writing`: a third ccwrite section, examples of calques and LLM phrasing common in tech blogs and business documents (silently fail, the moment, 〜側に倒す, 時間を溶かす, 解像度を上げる, closing formulas), keeping the nuance a metaphor carried, and the rule for monotonous endings.
+- `jp-copy-editor`: guardrails that keep a draft's claim, weight, strength of assertion and the job of each sentence, and add no facts; output now lists what changed and why, LLM-like phrasing kept because it carries meaning, and questions.
+
+Examples, guardrails and the idea of the ending check come from [yomiyasu](https://github.com/nanaism/yomiyasu) (MIT, Copyright (c) 2026 nanaism).
+
+### Known
+
+- A sentence that spans a 「」 opened on one line and closed on the next is counted with the quotation in it.
+
 ## 0.1.0
 
 First release.

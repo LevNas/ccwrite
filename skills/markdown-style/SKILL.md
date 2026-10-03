@@ -66,20 +66,24 @@ ccwrite は 3 つの方法で同じ検査（`scripts/mdcheck.py`）を走らせ�
 |---|---|---|
 | 強調 | 有効（pandoc が無いと何もしない） | `"CCWRITE_EMPHASIS": "0"` で無効 |
 | 行末スペース | 無効 | `"CCWRITE_LINEBREAKS": "1"` で有効（一文一行で書くリポジトリ向け） |
+| 文末の連続 | 有効 | `"CCWRITE_ENDINGS": "0"` で無効 |
 
 強調の判定は、CommonMark の規則を自前で実装せず、pandoc に描画させて `**` が残るかで決めます。pandoc が入っていない環境では、強調の検査は何も言いません。
+
+文末の連続は、描画の崩れではなく文章のリズムについての知らせです。段落の中で、句点の前の 3 文字が同じ文が 3 つ続くと（「〜します。」が 3 回など）知らせます。箇条書き、表、引用、「」の中身、コードは数えません。直し方は `japanese-tech-writing` の「文末の単調さ」に従います。
 
 ### 手で走らせる（ファイル全体）
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mdcheck.py" <file.md>                  # 強調
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mdcheck.py" --linebreaks <file.md>     # 強調と行末スペース
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mdcheck.py" --endings <file.md>        # 強調と文末の連続
 ```
 
 書き終わったときと、訂正したときの両方で走らせます。訂正で足した文が崩れを持ち込むためです。
 
 ### コミットのたび（pre-commit、任意）
 
-`${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit.sample` を `.git/hooks/pre-commit` にコピーすると、ステージした `.md` の追加行を検査し、見つけたらコミットを止めます。設定はファイル冒頭のコメントにあります。
+`${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit.sample` を `.git/hooks/pre-commit` にコピーすると、ステージした `.md` の追加行を検査し、見つけたらコミットを止めます。設定はファイル冒頭のコメントにあります。文末の連続は知らせにとどめるものなので、pre-commit では検査しません。
 
 追加行だけを見るのは、既存の違反が残るリポジトリで、別件で 1 行直しただけのコミットが止まらないようにするためです。止められた側が `--no-verify` を常用すると、検査全体が形骸化します。既存の違反は、次にその文書を触るときに直します。

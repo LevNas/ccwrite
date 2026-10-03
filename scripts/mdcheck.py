@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Markdown checks for Japanese text that renders differently from its source.
 
-Two checks, both about breakage that raises no error and that the writer cannot
-see in the source:
+Two checks about breakage that raises no error and that the writer cannot see
+in the source, and one hint about rhythm:
 
 linebreaks
     A line inside a paragraph that has no trailing two spaces. GFM treats such a
@@ -18,9 +18,16 @@ emphasis
     and a particle follows. pandoc renders each paragraph and decides; the rules
     are not re-implemented here. Without pandoc the check is skipped.
 
+endings
+    Three sentences in a row in one paragraph whose last three characters before
+    。！？ are the same (〜します。〜します。〜します。). Comparing classes of endings
+    such as です or ます would fire on most polite text; three characters keep
+    設定します and 確認できます apart. A hint, not an error, so it is opt-in here; the hook turns it
+    on. The idea comes from yomiyasu (https://github.com/nanaism/yomiyasu).
+
 Usage:
-    mdcheck.py [--linebreaks] [--no-emphasis] FILE...       # every line
-    mdcheck.py [--linebreaks] [--no-emphasis] --staged       # added lines in the index
+    mdcheck.py [--linebreaks] [--endings] [--no-emphasis] FILE...    # every line
+    mdcheck.py [--linebreaks] [--endings] [--no-emphasis] --staged    # added lines in the index
 
 Exit status: 1 when something is found, 0 otherwise, 2 on bad usage.
 """
@@ -148,6 +155,78 @@ def emphasis_misses(lines, wanted=None):
     return misses
 
 
+# A sentence ends at one of these, optionally followed by closing brackets.
+SENTENCE_END = re.compile(r"[。！？][」』）)]*")
+# Quotations and code are someone else's sentences, not the writer's endings.
+QUOTED = re.compile(r"「[^「」]*」|『[^『』]*』|`[^`]*`")
+ENDING_LEN = 3
+
+
+def _prose_lines(lines):
+    """Blank out front matter and every line that is not paragraph prose.
+
+    Lists, headings, tables, quotes and indented continuation lines are left
+    out: their endings follow the list or table, not the writer's rhythm.
+    """
+    out = _blank_hidden(lines)
+    if out and out[0].strip() == "---":
+        for i in range(1, len(out)):
+            done = out[i].strip() == "---"
+            out[i] = ""
+            if done:
+                out[0] = ""
+                break
+    return ["" if not line.strip() or line[:1] in " \t>" or _is_block(line.strip())
+            else line for line in out]
+
+
+def _ending(sentence):
+    """The last three characters before the final punctuation, or None.
+
+    Only endings that close on hiragana count (します, ました, である): a sentence
+    that ends on a noun, a symbol or code has no ending to repeat.
+    """
+    body = re.sub(r"\*\*|__", "", SENTENCE_END.sub("", sentence.strip()))
+    if len(body) < ENDING_LEN or not "ぁ" <= body[-1] <= "ん":
+        return None
+    return body[-ENDING_LEN:]
+
+
+def ending_runs(lines, wanted=None):
+    """Return [(lineno, text)] for the third sentence of each run of equal endings.
+
+    A run never crosses a paragraph. `wanted` keeps a run when one of its
+    sentences touches these line numbers.
+    """
+    runs = []
+    for first, _, block in _paragraphs(_prose_lines(lines)):
+        run, key = [], None
+        carry, start = "", None  # a sentence that continues on the next line
+        for lineno, line in enumerate(block, first):
+            line, pos = QUOTED.sub("", line), 0
+            for m in SENTENCE_END.finditer(line):
+                if start is None:
+                    start = lineno
+                sentence = (carry + line[pos:m.end()]).strip()
+                span = range(start, lineno + 1)
+                carry, start, pos = "", None, m.end()
+                k = _ending(sentence)
+                if k is None or k != key:
+                    run, key = [], k
+                if k is None:
+                    continue
+                run.append(span)
+                if len(run) == 3 and (wanted is None
+                                      or any(n in wanted for s in run for n in s)):
+                    runs.append((lineno, f"「{k}」: {sentence}"))
+            rest = line[pos:].strip()
+            if rest:
+                carry += rest
+                if start is None:
+                    start = lineno
+    return runs
+
+
 def added_lines(diff_text):
     """Map each file in a `git diff -U0` output to the set of added line numbers."""
     result, current = {}, None
@@ -174,7 +253,7 @@ def with_previous(numbers):
     return set(numbers) | {n - 1 for n in numbers if n > 1}
 
 
-def check(lines, wanted=None, linebreaks=False, emphasis=True):
+def check(lines, wanted=None, linebreaks=False, emphasis=True, endings=False):
     """Run the enabled checks and keep findings on `wanted` lines (None = all)."""
     found = []
     if linebreaks:
@@ -183,12 +262,15 @@ def check(lines, wanted=None, linebreaks=False, emphasis=True):
                   if scope is None or n in scope]
     if emphasis:
         found += [("emphasis", n, t) for n, t in emphasis_misses(lines, wanted)]
+    if endings:
+        found += [("ending", n, t) for n, t in ending_runs(lines, wanted)]
     return sorted(found, key=lambda f: f[1])
 
 
 LABELS = {
     "linebreak": "no trailing two spaces (the next line joins this one when rendered)",
     "emphasis": "** renders as literal asterisks (flanking rule)",
+    "ending": "third sentence in a row with the same ending",
 }
 
 
@@ -205,6 +287,8 @@ def main(argv=None):
                     help="check lines added in the index of the current repository")
     ap.add_argument("--linebreaks", action="store_true",
                     help="also check trailing two spaces (one-sentence-per-line repositories)")
+    ap.add_argument("--endings", action="store_true",
+                    help="also report three sentences in a row with the same ending")
     ap.add_argument("--no-emphasis", action="store_true", help="skip the emphasis check")
     args = ap.parse_args(argv)
     if bool(args.files) == args.staged:
@@ -230,7 +314,8 @@ def main(argv=None):
         else:
             with open(path, encoding="utf-8") as f:
                 text = f.read()
-        found = check(text.split("\n"), wanted, args.linebreaks, not args.no_emphasis)
+        found = check(text.split("\n"), wanted, args.linebreaks, not args.no_emphasis,
+                      args.endings)
         if found:
             print(report(path, found))
             status = 1
