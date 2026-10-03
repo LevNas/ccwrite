@@ -22,8 +22,9 @@ endings
     Three sentences in a row in one paragraph whose last three characters before
     。！？ are the same (〜します。〜します。〜します。). Comparing classes of endings
     such as です or ます would fire on most polite text; three characters keep
-    設定します and 確認できます apart. A hint, not an error, so it is opt-in here; the hook turns it
-    on. The idea comes from yomiyasu (https://github.com/nanaism/yomiyasu).
+    設定します and 確認できます apart. A hint, not an error, so it is opt-in here;
+    the hook turns it on. The idea comes from yomiyasu
+    (https://github.com/nanaism/yomiyasu).
 
 Usage:
     mdcheck.py [--linebreaks] [--endings] [--no-emphasis] FILE...    # every line

@@ -13,6 +13,7 @@ Examples, guardrails and the idea of the ending check come from [yomiyasu](https
 ### Known
 
 - A sentence that spans a 「」 opened on one line and closed on the next is counted with the quotation in it.
+- The same-ending check can miss a run, never reports more: a sentence that ends in a bracket, a link or `~~` before 。 has no ending and breaks the run; only `**` and `__` are stripped; a one-line `<!-- -->` comment hides the prose after it on that line; a line indented by spaces is skipped; and a fourth sentence added to an existing run of three is not reported, because a run is reported once, at its third sentence.
 
 ## 0.1.0
 
