@@ -1,0 +1,19 @@
+{
+  "name": "ccwrite",
+  "description": "Japanese writing for Claude Code: writing norms, a router that adapts text to the channel and recipient, a batch copy-editor agent, and warn-only checks for Markdown that renders differently from its source (emphasis next to Japanese punctuation, missing line-break spaces).",
+  "version": "0.1.0",
+  "author": {
+    "name": "LevNas"
+  },
+  "repository": "https://github.com/LevNas/ccwrite",
+  "license": "MIT",
+  "keywords": ["japanese", "writing", "markdown", "lint", "budoux", "copy-editing"],
+  "userConfig": {
+    "templates_dir": {
+      "type": "directory",
+      "title": "Template directory",
+      "description": "Where japanese-writing-router saves message templates. Empty uses the plugin data directory, which is deleted when the plugin is uninstalled; choose a directory in a private repository to keep them.",
+      "default": ""
+    }
+  }
+}

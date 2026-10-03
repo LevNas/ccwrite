@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Wrap Japanese text at BudouX phrase boundaries to a target width.
+
+Picks where a Markdown line break goes (<br> in a table cell, two trailing
+spaces in body text) so that it falls between phrases. Reads the arguments, or
+standard input line by line.
+
+Examples:
+  budoux-wrap --width 15 --sep '<br>' "長い文……"   # table cell
+  budoux-wrap --width 25 --md "長い文……"           # body text (two trailing spaces)
+  echo "長い文……" | budoux-wrap --width 20          # newline by default
+  budoux-wrap --phrases "長い文……"                 # one phrase per line, no wrapping
+
+budoux is looked up in this Python first, then in --venv (the venv that
+scripts/setup-budoux created), in which case the script runs again under that
+venv's python.
+"""
+import argparse
+import os
+import sys
+
+
+def import_budoux(venv):
+    try:
+        import budoux
+        return budoux
+    except ImportError:
+        pass
+    python = os.path.join(venv, "bin", "python3") if venv else ""
+    # Compare prefixes, not executables: a venv's python3 is a symlink to the
+    # system one, so both resolve to the same file.
+    if python and os.path.isfile(python) and os.path.realpath(sys.prefix) != os.path.realpath(venv):
+        os.execv(python, [python, os.path.abspath(__file__), *sys.argv[1:]])
+    sys.exit("budoux-wrap: budoux is not installed. Run scripts/setup-budoux <venv-dir> "
+             "(after asking the user), or `pip install budoux`.")
+
+
+def wrap_line(parser, line, width):
+    """Pack the phrases of one line greedily into chunks of at most `width` characters."""
+    out, cur = [], ""
+    for chunk in parser.parse(line):
+        if cur and len(cur) + len(chunk) > width:
+            out.append(cur)
+            cur = chunk
+        else:
+            cur += chunk
+    if cur:
+        out.append(cur)
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--width", type=int, default=20,
+                    help="target characters per line; full- and half-width count the same (default 20)")
+    ap.add_argument("--sep", default="\n", help="string inserted at each break (default newline)")
+    ap.add_argument("--md", action="store_true", help="break with two trailing spaces and a newline")
+    ap.add_argument("--phrases", action="store_true", help="print one phrase per line instead of wrapping")
+    ap.add_argument("--venv", default="", help="venv to use when this Python has no budoux")
+    ap.add_argument("text", nargs="*", help="text to wrap (default: standard input)")
+    args = ap.parse_args()
+
+    parser = import_budoux(args.venv).load_default_japanese_parser()
+    sep = "  \n" if args.md else args.sep
+    lines = args.text if args.text else [line.rstrip("\n") for line in sys.stdin]
+    for line in lines:
+        if not line.strip():
+            print(line)
+        elif args.phrases:
+            print("\n".join(parser.parse(line)))
+        else:
+            print(sep.join(wrap_line(parser, line, args.width)))
+
+
+if __name__ == "__main__":
+    main()

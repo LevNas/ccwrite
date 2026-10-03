@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Install BudouX into a venv for scripts/budoux-wrap.
+#
+# Usage: setup-budoux <venv-dir>
+#
+# The japanese-writing-router skill passes ${CLAUDE_PLUGIN_DATA}/venv, which
+# survives plugin updates and is deleted when the plugin is uninstalled. This
+# downloads a package from PyPI, so the skill asks the user before running it.
+set -euo pipefail
+
+venv="${1:?usage: setup-budoux <venv-dir>}"
+
+if [ ! -x "${venv}/bin/python3" ]; then
+  python3 -m venv "${venv}"
+fi
+"${venv}/bin/python3" -m pip install --quiet --upgrade budoux
+"${venv}/bin/python3" -c 'import budoux'
+echo "budoux installed in ${venv}"

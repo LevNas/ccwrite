@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# ccwrite Markdown pre-commit hook (SAMPLE - for repositories that want it).
+#
+# Runs scripts/mdcheck.py on the lines added to staged .md files and stops the
+# commit when emphasis would render as literal asterisks (and, if enabled, when a
+# paragraph line has no trailing two spaces). Lines the commit did not add are
+# not checked, so old problems in a file never block an unrelated change.
+#
+# Install:
+#   cp <ccwrite>/hooks/pre-commit.sample .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#   # or chain it from an existing pre-commit hook
+#
+# Settings (environment, or edit the defaults below):
+#   CCWRITE_LINEBREAKS=1      also check trailing two spaces (one sentence per line)
+#   CCWRITE_EMPHASIS=0        skip the emphasis check
+#   CCWRITE_MDCHECK=<path>    mdcheck.py to use (default: the newest installed ccwrite)
+#
+# It does nothing when mdcheck.py or python3 cannot be found, and the emphasis
+# check is skipped without pandoc. Bypass once with `git commit --no-verify`.
+set -euo pipefail
+
+LINEBREAKS="${CCWRITE_LINEBREAKS:-0}"
+EMPHASIS="${CCWRITE_EMPHASIS:-1}"
+
+mdcheck="${CCWRITE_MDCHECK:-}"
+if [ -z "${mdcheck}" ]; then
+  # The plugin cache path changes with every version, so take the newest one.
+  mdcheck="$(ls -d "${HOME}"/.claude/plugins/cache/*/ccwrite/*/scripts/mdcheck.py 2>/dev/null | sort -V | tail -n 1 || true)"
+fi
+[ -n "${mdcheck}" ] && [ -f "${mdcheck}" ] || exit 0
+command -v python3 >/dev/null 2>&1 || exit 0
+
+args=(--staged)
+case "${LINEBREAKS}" in 1|true|yes|on) args+=(--linebreaks) ;; esac
+case "${EMPHASIS}" in 0|false|no|off) args+=(--no-emphasis) ;; esac
+
+if ! python3 "${mdcheck}" "${args[@]}"; then
+  echo "ccwrite: fix the lines above, or commit with --no-verify to skip this check." >&2
+  exit 1
+fi
