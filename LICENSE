@@ -30,3 +30,31 @@ gist (https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d),
 released under the Unlicense
 (https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063).
 It is included unmodified and is not covered by the MIT license above.
+
+Some examples in the section "翻訳調と LLM 口調の追加例" of
+skills/japanese-tech-writing/SKILL.md, the sections "直すときの歯止め" and
+"出力" of agents/jp-copy-editor.md, and the idea of the same-ending check in
+scripts/mdcheck.py are adapted from yomiyasu
+(https://github.com/nanaism/yomiyasu), under this license:
+
+MIT License
+
+Copyright (c) 2026 nanaism
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
