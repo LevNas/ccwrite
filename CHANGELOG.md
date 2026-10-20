@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Changed
+
+- `japanese-tech-writing`, "適用の前提": for text an agent reads (`CLAUDE.md`, rules, skills, prompts for a subagent or pane), structure and pruning follow ccharness's `writing-for-agents` skill when it is installed, and this skill applies only to wording (plain words, no LLM filler, no calques). The structure norms written for human readers (paragraph writing, the flow of an argument) add explanation, which works against deletion as the default for agent-facing text. `jp-copy-editor` reads this skill whole, so it follows the same rule.
+
 ## 0.2.0
 
 ### Added
